@@ -16,7 +16,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-
+  bool _obscurePassword = true; // track password visibility
   bool isLoading = false;
 
   Future<void> _login() async {
@@ -121,17 +121,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 20),
 
                   // Password field
-                  TextField(
-                    controller: passwordController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      hintText: "Password",
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                  ),
+                  // Password field
+TextField(
+  controller: passwordController,
+  obscureText: _obscurePassword,
+  decoration: InputDecoration(
+    hintText: "Password",
+    prefixIcon: const Icon(Icons.lock_outline),
+    suffixIcon: IconButton(
+      onPressed: () {
+        setState(() {
+          _obscurePassword = !_obscurePassword;
+        });
+      },
+      icon: Icon(
+        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+      ),
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+    ),
+  ),
+),
+
 
                   const SizedBox(height: 30),
 
