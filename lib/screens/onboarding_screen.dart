@@ -120,7 +120,7 @@ class OnboardingScreen extends StatelessWidget {
 
           //  Google button 
           Positioned(
-            bottom: 150,
+            bottom: 100,
             left: 20,
             right: 20,
             child: SizedBox(
