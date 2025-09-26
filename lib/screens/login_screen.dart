@@ -8,6 +8,8 @@ import 'package:laptopharbor/admin/admin_dashboard.dart';
 import 'package:laptopharbor/screens/signup_screen.dart';
 import 'package:laptopharbor/screens/dashboard_screen.dart';
 import 'package:laptopharbor/screens/forgot_password_screen.dart';
+import 'package:laptopharbor/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -89,8 +91,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(),
       body: Stack(
         children: [
@@ -102,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
               height: 610,
               width: 610,
               decoration: BoxDecoration(
-                color: lightblue,
+                color:  themeProvider.isDarkMode ? const Color.fromARGB(99, 16, 45, 150) : primary,
                 shape: BoxShape.circle,
               ),
             ),

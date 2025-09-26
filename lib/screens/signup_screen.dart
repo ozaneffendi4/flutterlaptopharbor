@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:laptopharbor/constants.dart';
 import 'package:laptopharbor/screens/login_screen.dart';
+import 'package:laptopharbor/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -80,8 +82,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor:  themeProvider.isDarkMode ? const Color.fromARGB(99, 16, 45, 150) : primary,
       body: Stack(
         children: [
           // === Background Circles ===

@@ -69,7 +69,6 @@ class _LaptopsPageState extends State<LaptopsPage>
     return FadeTransition(
       opacity: _fadeInAnimation,
       child: Scaffold(
-        backgroundColor: Colors.grey.shade100,
         body: CustomScrollView(
           slivers: [
        
