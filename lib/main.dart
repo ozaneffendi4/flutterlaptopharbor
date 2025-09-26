@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:laptopharbor/screens/onboarding_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:laptopharbor/screens/dashboard_screen.dart';
 import 'package:laptopharbor/theme_provider.dart';
@@ -85,7 +86,7 @@ class MyApp extends StatelessWidget {
       ),
 
       themeMode: themeProvider.currentTheme,
-      home: const DashboardScreen(),
+      home: const OnboardingScreen(),
     );
   }
 }

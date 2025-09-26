@@ -84,7 +84,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
-      backgroundColor:  themeProvider.isDarkMode ? const Color.fromARGB(99, 16, 45, 150) : primary,
+      backgroundColor:  themeProvider.isDarkMode ? const Color.fromARGB(99, 16, 45, 150) : const Color.fromARGB(255, 255, 255, 255),
       body: Stack(
         children: [
           // === Background Circles ===

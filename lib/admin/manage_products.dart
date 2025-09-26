@@ -275,9 +275,11 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: StreamBuilder<QuerySnapshot>(
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    body: SafeArea(
+      child: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection("products")
             .orderBy("createdAt", descending: true)
@@ -359,15 +361,16 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _editingProduct = null;
-          _clearForm();
-          _showBottomSheet();
-        },
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.add, size: 30),
-      ),
-    );
-  }
+    ),
+    floatingActionButton: FloatingActionButton(
+      onPressed: () {
+        _editingProduct = null;
+        _clearForm();
+        _showBottomSheet();
+      },
+      backgroundColor: Colors.blue,
+      child: const Icon(Icons.add, size: 30),
+    ),
+  );
+}
 }

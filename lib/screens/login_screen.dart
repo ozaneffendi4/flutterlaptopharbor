@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
               height: 610,
               width: 610,
               decoration: BoxDecoration(
-                color:  themeProvider.isDarkMode ? const Color.fromARGB(99, 16, 45, 150) : primary,
+                color:  themeProvider.isDarkMode ? const Color.fromARGB(99, 16, 45, 150) : const Color.fromARGB(72, 31, 31, 187),
                 shape: BoxShape.circle,
               ),
             ),
