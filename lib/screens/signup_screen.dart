@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:laptopharbor/constants.dart';
 import 'package:laptopharbor/screens/login_screen.dart';
 
@@ -18,9 +18,11 @@ class _SignupScreenState extends State<SignupScreen> {
   final _confirmPasswordController = TextEditingController();
 
   final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
 
+  // ✅ Signup Function
   void _signup() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -32,15 +34,28 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       setState(() => _isLoading = true);
 
-      await _auth.createUserWithEmailAndPassword(
+      // --- Create user in Firebase Auth ---
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Optionally update display name
-      await _auth.currentUser?.updateDisplayName(_nameController.text.trim());
+      User? user = userCredential.user;
+      if (user == null) throw Exception("User creation failed");
 
-      // Navigate to home or login screen
+      // --- Update display name ---
+      await user.updateDisplayName(_nameController.text.trim());
+
+      // --- Create Firestore document automatically ---
+      await _firestore.collection('users').doc(user.uid).set({
+        'uid': user.uid,
+        'name': _nameController.text.trim(),
+        'email': user.email,
+        'role': 'user', // default role
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // --- Success Message & Navigate to Login ---
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Signup successful!")),
@@ -53,6 +68,10 @@ class _SignupScreenState extends State<SignupScreen> {
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? "Signup failed")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);

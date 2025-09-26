@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.example.laptopharbor"
-    compileSdk = 34           // Updated to latest SDK
+    compileSdk = 35           // Updated to latest SDK
     ndkVersion = "27.0.12077973"  // Match Firebase requirement
 
     defaultConfig {
