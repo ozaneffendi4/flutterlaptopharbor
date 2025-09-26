@@ -16,7 +16,9 @@ class _HomePageState extends State<HomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  // Convert base64 back to image
+  String searchQuery = '';
+  String sortOrder = 'none'; // 'low' or 'high'
+
   Image _base64ToImage(String base64String) {
     final bytes = base64Decode(base64String);
     return Image.memory(bytes, fit: BoxFit.cover);
@@ -53,7 +55,6 @@ class _HomePageState extends State<HomePage> {
               Text(product["title"] ?? "Product", style: const TextStyle(fontSize: 18)),
               const SizedBox(height: 20),
 
-              // Name
               TextField(
                 controller: nameController,
                 decoration: InputDecoration(
@@ -63,7 +64,6 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 15),
 
-              // Phone
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
@@ -74,7 +74,6 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 15),
 
-              // Address
               TextField(
                 controller: addressController,
                 maxLines: 3,
@@ -85,7 +84,6 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 15),
 
-              // Quantity
               TextField(
                 controller: qtyController,
                 keyboardType: TextInputType.number,
@@ -122,7 +120,6 @@ class _HomePageState extends State<HomePage> {
                     return;
                   }
 
-                  // Add order to Firestore
                   await _firestore.collection("orders").add({
                     "userId": userId,
                     "productId": product["id"],
@@ -151,88 +148,138 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Build the search bar + filter dropdown
+  Widget _buildSearchAndFilter() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: "Search products...",
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value.toLowerCase();
+                });
+              },
+            ),
+          ),
+          const SizedBox(width: 10),
+          DropdownButton<String>(
+            value: sortOrder,
+            items: const [
+              DropdownMenuItem(value: 'none', child: Text("Sort")),
+              DropdownMenuItem(value: 'low', child: Text("Price ↑")),
+              DropdownMenuItem(value: 'high', child: Text("Price ↓")),
+            ],
+            onChanged: (value) {
+              setState(() {
+                sortOrder = value!;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: primary,
-        title: const Text("Home"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_cart),
-            onPressed: () {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid != null) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CartPage(userId: uid),  // 👈 pass UID
-      ),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please sign in first')),
-    );
-  }
-},
-
-          ),
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.collection("products").orderBy("createdAt", descending: true).snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) return const Center(child: Text("Something went wrong"));
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-
-          final products = snapshot.data!.docs;
-          if (products.isEmpty) return const Center(child: Text("No products available yet."));
-
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: products.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.8,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
+      body: Column(
+        children: [
+          // Banner image
+          Container(
+            margin: const EdgeInsets.all(16),
+            height: 150,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              image: const DecorationImage(
+                image: AssetImage("assets/laptop_banner.png"), // <-- replace with your banner
+                fit: BoxFit.cover,
+              ),
             ),
-            itemBuilder: (context, index) {
-              final product = products[index].data() as Map<String, dynamic>;
-              product["id"] = products[index].id;
+          ),
 
-              return GestureDetector(
-                onTap: () => _addToCartPopup(product),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 4))],
+          // Search + Filter
+          _buildSearchAndFilter(),
+
+          // Products
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _firestore.collection("products").snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) return const Center(child: Text("Something went wrong"));
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+
+                var products = snapshot.data!.docs
+                    .map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      data["id"] = doc.id;
+                      return data;
+                    })
+                    .where((p) => p["title"].toString().toLowerCase().contains(searchQuery))
+                    .toList();
+
+                if (sortOrder == 'low') {
+                  products.sort((a, b) => (a["price"] ?? 0).compareTo(b["price"] ?? 0));
+                } else if (sortOrder == 'high') {
+                  products.sort((a, b) => (b["price"] ?? 0).compareTo(a["price"] ?? 0));
+                }
+
+                if (products.isEmpty) return const Center(child: Text("No products found."));
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: products.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.8,
+                    crossAxisSpacing: 15,
+                    mainAxisSpacing: 15,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(15),
-                          child: product["imageBase64"] != null && product["imageBase64"].toString().isNotEmpty
-                              ? _base64ToImage(product["imageBase64"])
-                              : const Icon(Icons.laptop, size: 50, color: Colors.grey),
+                  itemBuilder: (context, index) {
+                    final product = products[index];
+
+                    return GestureDetector(
+                      onTap: () => _addToCartPopup(product),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 4))],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(15),
+                                child: product["imageBase64"] != null && product["imageBase64"].toString().isNotEmpty
+                                    ? _base64ToImage(product["imageBase64"])
+                                    : const Icon(Icons.laptop, size: 50, color: Colors.grey),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(product["title"] ?? "No title", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+                            const SizedBox(height: 5),
+                            Text("\$${product["price"] ?? 0}", style: const TextStyle(color: primary, fontSize: 16)),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(product["title"] ?? "No title", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-                      const SizedBox(height: 5),
-                      Text("\$${product["price"] ?? 0}", style: const TextStyle(color: primary, fontSize: 16)),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

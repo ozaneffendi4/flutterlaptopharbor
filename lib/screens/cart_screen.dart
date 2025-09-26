@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CartPage extends StatelessWidget {
-  const CartPage({super.key});
-
-  // 🔑 Hard-coded userId just for testing
-  final String testUserId = "0saU2Bou7iUUXj9acaL60kcCsRi1";
+  const CartPage({super.key, required String userId});
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -31,12 +29,22 @@ class CartPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text("Please login to view your cart.")),
+      );
+    }
+
+    final String uid = user.uid;
+
     return Scaffold(
       appBar: AppBar(title: const Text("My Cart")),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection("orders")
-            .where("userId", isEqualTo: testUserId) // 👈 hard-coded userId
+            .where("userId", isEqualTo: uid) // 👈 use logged-in user UID
             .orderBy("createdAt", descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -56,13 +64,14 @@ class CartPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             itemCount: orders.length,
             itemBuilder: (context, index) {
-              final order = orders[index].data() as Map<String, dynamic>;
+              final order = orders[index].data()! as Map<String, dynamic>;
               final status = order["status"] ?? "pending";
               final quantity = order["quantity"] ?? 1;
 
               return Card(
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
                   leading: CircleAvatar(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:laptopharbor/constants.dart';
 import 'package:laptopharbor/screens/cart_screen.dart';
 import 'package:laptopharbor/screens/home_page.dart';
@@ -19,13 +20,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final iconList = <IconData>[
     Icons.home,          // Home
-    Icons.laptop,        // Laptop
+    Icons.book,          // Laptops
     Icons.shopping_cart, // Cart
     Icons.person,        // Profile
   ];
 
   @override
   Widget build(BuildContext context) {
+    final User? user = FirebaseAuth.instance.currentUser;
+    final String? uid = user?.uid;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: primary,
@@ -34,6 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             IconButton(
               onPressed: () {
+                FirebaseAuth.instance.signOut(); // ✅ logout functionality
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -50,12 +55,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
       body: _currentIndex == 0
-          ? HomePage()
+          ? const HomePage()
           : _currentIndex == 1
               ? const LaptopsPage()
               : _currentIndex == 2
-                  ? const CartPage(userId: '') // pass current user ID
-                  : const ProfilePage(),
+                  ? (uid != null
+                      ? CartPage(userId: uid) // ✅ logged-in user cart
+                      : const Center(child: Text("Please login to view your cart")))
+                  : const ProfilePage(), // ✅ Profile tab
       floatingActionButton: FloatingActionButton(
         backgroundColor: primary,
         onPressed: () {

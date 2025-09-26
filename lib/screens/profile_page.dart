@@ -1,7 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:laptopharbor/screens/cart_screen.dart';
 import 'package:laptopharbor/screens/login_screen.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -15,14 +16,20 @@ class _ProfilePageState extends State<ProfilePage> {
   File? _profileImage;
   final picker = ImagePicker();
 
-  String name = "John Doe";
-  String phone = "+92 300 1234567";
+  User? user = FirebaseAuth.instance.currentUser;
 
   bool isEditingName = false;
   bool isEditingPhone = false;
 
-  final nameController = TextEditingController();
-  final phoneController = TextEditingController();
+  late TextEditingController nameController;
+  late TextEditingController phoneController;
+
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController(text: user?.displayName ?? "");
+    phoneController = TextEditingController(text: user?.phoneNumber ?? "");
+  }
 
   Future<void> _pickImage() async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -30,12 +37,25 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         _profileImage = File(pickedFile.path);
       });
+      // TODO: Upload the image to Firebase Storage and save URL to user profile if needed
+    }
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+  
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -47,8 +67,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   radius: 60,
                   backgroundImage: _profileImage != null
                       ? FileImage(_profileImage!)
-                      : const AssetImage("assets/images/default_user.png")
-                          as ImageProvider,
+                      : (user?.photoURL != null
+                          ? NetworkImage(user!.photoURL!)
+                          : const AssetImage("assets/images/default_user.png")
+                              as ImageProvider),
                 ),
                 Positioned(
                   bottom: 0,
@@ -65,7 +87,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 20),
 
           // Name Field
           Row(
@@ -73,37 +95,45 @@ class _ProfilePageState extends State<ProfilePage> {
               Expanded(
                 child: isEditingName
                     ? TextField(
-                        controller: nameController..text = name,
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: "Name",
+                          border: OutlineInputBorder(),
+                        ),
                         onSubmitted: (value) {
                           setState(() {
-                            name = value;
                             isEditingName = false;
                           });
+                          // Optionally update Firebase Auth displayName
+                          user?.updateDisplayName(value);
                         },
                       )
                     : Text(
-                        "Name: $name",
+                        "Name: ${user?.displayName ?? 'No Name'}",
                         style: const TextStyle(fontSize: 18),
                       ),
               ),
               IconButton(
                 icon: Icon(isEditingName ? Icons.check : Icons.edit),
                 onPressed: () {
-                  if (isEditingName) {
-                    setState(() {
-                      name = nameController.text;
-                      isEditingName = false;
-                    });
-                  } else {
-                    setState(() {
-                      isEditingName = true;
-                    });
-                  }
+                  setState(() {
+                    if (isEditingName) {
+                      user?.updateDisplayName(nameController.text);
+                    }
+                    isEditingName = !isEditingName;
+                  });
                 },
               ),
             ],
           ),
-          const Divider(),
+          const SizedBox(height: 10),
+
+          // Email (read-only)
+          Text(
+            "Email: ${user?.email ?? 'No Email'}",
+            style: const TextStyle(fontSize: 18),
+          ),
+          const Divider(height: 30),
 
           // Phone Field
           Row(
@@ -111,55 +141,47 @@ class _ProfilePageState extends State<ProfilePage> {
               Expanded(
                 child: isEditingPhone
                     ? TextField(
-                        controller: phoneController..text = phone,
+                        controller: phoneController,
                         keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: "Phone",
+                          border: OutlineInputBorder(),
+                        ),
                         onSubmitted: (value) {
                           setState(() {
-                            phone = value;
                             isEditingPhone = false;
                           });
                         },
                       )
                     : Text(
-                        "Phone: $phone",
+                        "Phone: ${user?.phoneNumber ?? 'Not set'}",
                         style: const TextStyle(fontSize: 18),
                       ),
               ),
               IconButton(
                 icon: Icon(isEditingPhone ? Icons.check : Icons.edit),
                 onPressed: () {
-                  if (isEditingPhone) {
-                    setState(() {
-                      phone = phoneController.text;
-                      isEditingPhone = false;
-                    });
-                  } else {
-                    setState(() {
-                      isEditingPhone = true;
-                    });
-                  }
+                  setState(() {
+                    isEditingPhone = !isEditingPhone;
+                  });
                 },
               ),
             ],
           ),
-          const Divider(),
+          const Divider(height: 30),
 
-          // Orders
+          // My Orders
           ListTile(
             leading: const Icon(Icons.shopping_bag),
             title: const Text("My Orders"),
             onTap: () {
-              // TODO: Navigate to Orders Page
-            },
-          ),
-          const Divider(),
-
-          // Order Tracking
-          ListTile(
-            leading: const Icon(Icons.local_shipping),
-            title: const Text("Track Orders"),
-            onTap: () {
-              // TODO: Navigate to Tracking Page
+              final uid = user?.uid;
+              if (uid != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => CartPage(userId: uid)),
+                );
+              }
             },
           ),
           const Divider(),
@@ -170,10 +192,9 @@ class _ProfilePageState extends State<ProfilePage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
+                minimumSize: const Size(150, 50),
               ),
-              onPressed: () {
-                LoginScreen();
-              },
+              onPressed: _logout,
               icon: const Icon(Icons.logout),
               label: const Text("Logout"),
             ),
